@@ -57,7 +57,7 @@ class _MyCameraPreviewState extends State<MyCameraPreview> {
                           },
                         )
                       : IconButton(
-                          icon: Icon(Icons.play_arrow,
+                          icon: Icon(Icons.radio_button_checked,
                               color: Colors.white, size: 30),
                           onPressed: () async {
                             if (mounted) _detect();

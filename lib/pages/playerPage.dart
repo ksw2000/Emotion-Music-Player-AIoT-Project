@@ -80,6 +80,8 @@ class _PlayerState extends State<Player> {
           child: Text(
             (loadLastMusic) ? musicName : "載入中...",
             style: TextStyle(fontSize: 18),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           )),
       Padding(
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
@@ -96,30 +98,26 @@ class _PlayerState extends State<Player> {
                   },
                 )
               : CircularProgressIndicator()),
-      Spacer(),
-      Text('$emotion'),
-      Spacer(),
       Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
-          child: Ink(
-              decoration: BoxDecoration(
-                color: Colors.cyan,
-                shape: BoxShape.circle,
-              ),
-              child: (widget.cameraCtrl.value.isStreamingImages)
-                  ? IconButton(
-                      icon: Icon(Icons.stop, color: Colors.white, size: 30),
-                      onPressed: () async {
-                        await _stopDetect([]);
-                        setState(() {});
-                      },
-                    )
-                  : IconButton(
-                      icon: Icon(Icons.camera, color: Colors.white, size: 30),
-                      onPressed: () async {
-                        if (mounted) _detect();
-                      },
-                    ))),
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Text('$emotion'),
+      ),
+      (widget.cameraCtrl.value.isStreamingImages)
+          ? IconButton(
+              iconSize: 50,
+              icon: Icon(Icons.stop, color: Colors.black),
+              onPressed: () async {
+                await _stopDetect([]);
+                setState(() {});
+              },
+            )
+          : IconButton(
+              iconSize: 50,
+              icon: Icon(Icons.face, color: Colors.black),
+              onPressed: () async {
+                if (mounted) _detect();
+              },
+            ),
     ]);
   }
 

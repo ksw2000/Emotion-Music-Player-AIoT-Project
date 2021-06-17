@@ -86,22 +86,34 @@ class Home extends StatelessWidget {
     return DefaultTabController(
         length: 2,
         child: Scaffold(
-          appBar: AppBar(
-            bottom: TabBar(
-              tabs: [
-                Tab(icon: Icon(Icons.play_arrow)),
-                Tab(icon: Icon(Icons.camera_alt)),
+            appBar: AppBar(
+              bottom: TabBar(
+                tabs: [
+                  Tab(icon: Icon(Icons.play_arrow, color: Colors.white)),
+                  Tab(icon: Icon(Icons.camera_alt, color: Colors.white)),
+                ],
+              ),
+              title: Text(
+                "Emotion music player",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            body: TabBarView(
+              children: [
+                Player(cameraCtrl, refresh: refresh),
+                MyCameraPreview(cameraCtrl, refresh: refresh),
               ],
             ),
-            title: Text("Emotion music player",
-                style: TextStyle(color: Colors.white)),
-          ),
-          body: TabBarView(
-            children: [
-              Player(cameraCtrl, refresh: refresh),
-              MyCameraPreview(cameraCtrl, refresh: refresh),
-            ],
-          ),
-        ));
+            floatingActionButton: Ink(
+                decoration: BoxDecoration(
+                  color: Colors.cyan,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.favorite, color: Colors.white),
+                  onPressed: () {
+                    refresh();
+                  },
+                ))));
   }
 }
