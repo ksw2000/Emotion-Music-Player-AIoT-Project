@@ -134,13 +134,19 @@ class _PlayerState extends State<Player> {
           }
         }
         print("$maxLabel");
-        setState(() {
-          if (maxLabel == noFace) {
-            emotion = "沒有偵測到您的表情，為您隨機點播";
-          } else {
-            emotion = "正在為您推薦「${musicServerLabel[maxLabel]}」適合聽的歌";
-          }
-        });
+        // delay 3 seconds for waiting the remainder of labels return
+        for (int i = 200; i < 3000; i += 200) {
+          Timer(Duration(milliseconds: i), () {
+            setState(() {
+              if (maxLabel == noFace) {
+                emotion = "沒有偵測到您的表情，為您隨機點播";
+              } else {
+                emotion = "正在為您推薦「${musicServerLabel[maxLabel]}」適合聽的歌";
+              }
+            });
+          });
+        }
+
         await getMusic(maxLabel);
       }
     }
@@ -157,14 +163,12 @@ class _PlayerState extends State<Player> {
 
     // the numbers of each label
     List score = [0, 0, 0, 0, 0]; // 0 - 4
-
     try {
       // timeout
       // try to predict in 5 seconds
-      new Timer(Duration(seconds: 5), () {
+      Timer(Duration(seconds: 5), () {
         if (widget.cameraCtrl.value.isStreamingImages) {
           print("5秒到了");
-          lock = true;
           _stopDetect(score);
         }
       });
@@ -212,12 +216,10 @@ class _PlayerState extends State<Player> {
               var input = ImagePrehandle.uint32ListToRGB3D(resultImage);
               var output = cls.run([input]);
               print(facialLabel[output]);
-              if (!lock) {
-                setState(() {
-                  score[facialLabel[output]] += 1;
-                  emotion = musicServerLabel[facialLabel[output]];
-                });
-              }
+              setState(() {
+                score[facialLabel[output]] += 1;
+                emotion = musicServerLabel[facialLabel[output]];
+              });
             } else {
               print("interpreter is null");
             }
