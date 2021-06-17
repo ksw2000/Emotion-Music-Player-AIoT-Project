@@ -24,21 +24,22 @@ class _VideoPlayerState extends State<VideoPlayer> {
   bool _isPlaying = false, _isEnd = false;
   String oldPath = '';
 
-  void initController() {
-    _controller = vp.VideoPlayerController.network("${widget.videoPath}");
-    _controller.addListener(() {
-      if (_controller.value.hasError) {
+  vp.VideoPlayerController initController() {
+    vp.VideoPlayerController _newController =
+        vp.VideoPlayerController.network("${widget.videoPath}");
+    _newController.addListener(() {
+      if (_newController.value.hasError) {
         if (mounted) {
           if (widget.onError != null) {
             widget.onError!();
-            print(_controller.value.errorDescription);
+            print(_newController.value.errorDescription);
           }
           setState(() {});
         }
       }
 
-      if (_controller.value.isInitialized) {
-        final bool isPlaying = _controller.value.isPlaying;
+      if (_newController.value.isInitialized) {
+        final bool isPlaying = _newController.value.isPlaying;
         if (isPlaying != _isPlaying) {
           setState(() {
             _isPlaying = isPlaying;
@@ -46,12 +47,12 @@ class _VideoPlayerState extends State<VideoPlayer> {
         }
 
         setState(() {
-          _duration = _controller.value.duration;
+          _duration = _newController.value.duration;
         });
 
         Timer.run(() {
           setState(() {
-            _position = _controller.value.position;
+            _position = _newController.value.position;
             if (_position != null) {
               if (_duration?.compareTo(_position!) == 0 ||
                   _duration?.compareTo(_position!) == -1) {
@@ -68,23 +69,25 @@ class _VideoPlayerState extends State<VideoPlayer> {
       }
     });
 
-    _controller.initialize().then((_) {
+    _newController.initialize().then((_) {
       oldPath = widget.videoPath;
       // Ensure the first frame is shown after the video is initialized,
       // even before the play button has been pressed.
       if (mounted) {
         if (widget.autoPlay) {
-          _controller.seekTo(Duration(seconds: 0));
-          _controller.play();
+          _newController.seekTo(Duration(seconds: 0));
+          _newController.play();
         } else {}
         setState(() {});
       }
     });
+
+    return _newController;
   }
 
   void initState() {
     super.initState();
-    initController();
+    _controller = initController();
   }
 
   @override
@@ -94,7 +97,10 @@ class _VideoPlayerState extends State<VideoPlayer> {
   }
 
   void reInitialize() async {
-    initController();
+    if (_controller.value.isInitialized) {
+      await _controller.dispose();
+    }
+    _controller = initController();
   }
 
   @override
@@ -126,9 +132,15 @@ class _VideoPlayerState extends State<VideoPlayer> {
                 iconSize: 18.0,
                 onPressed: () {
                   setState(() {
-                    _controller.value.isPlaying
-                        ? _controller.pause()
-                        : _controller.play();
+                    if (_controller.value.isPlaying) {
+                      _controller.pause();
+                    } else {
+                      // if is end, replay
+                      if (_isEnd) {
+                        _controller.seekTo(Duration(seconds: 0));
+                      }
+                      _controller.play();
+                    }
                   });
                 },
               ),

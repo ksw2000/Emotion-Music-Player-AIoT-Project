@@ -76,7 +76,7 @@ class _PlayerState extends State<Player> {
     return Column(children: [
       SizedBox(height: 15),
       Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
+          padding: EdgeInsets.all(20),
           child: Text(
             (loadLastMusic) ? musicName : "載入中...",
             style: TextStyle(fontSize: 18),
@@ -135,17 +135,15 @@ class _PlayerState extends State<Player> {
         }
         print("$maxLabel");
         // delay 3 seconds for waiting the remainder of labels return
-        for (int i = 200; i < 3000; i += 200) {
-          Timer(Duration(milliseconds: i), () {
-            setState(() {
-              if (maxLabel == noFace) {
-                emotion = "沒有偵測到您的表情，為您隨機點播";
-              } else {
-                emotion = "正在為您推薦「${musicServerLabel[maxLabel]}」適合聽的歌";
-              }
-            });
+        Timer(Duration(milliseconds: 2500), () {
+          setState(() {
+            if (maxLabel == noFace) {
+              emotion = "沒有偵測到您的表情，為您隨機點播";
+            } else {
+              emotion = "正在為您推薦「${musicServerLabel[maxLabel]}」適合聽的歌";
+            }
           });
-        }
+        });
 
         await getMusic(maxLabel);
       }
