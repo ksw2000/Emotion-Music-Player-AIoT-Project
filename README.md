@@ -1,16 +1,16 @@
-# emotion_music_player
+# Emotion Music Player
 
-A new Flutter project.
+AIoT 專題，透過相機抓取你的表情並推薦適合的歌
 
-## Getting Started
+Bug 很多，臨時做的
 
-This project is a starting point for a Flutter application.
+以後有時間應該也不會更
 
-A few resources to get you started if this is your first Flutter project:
+覺得實用性不大​
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+"分組活動請找會寫前端的同學" ─ Kashiwa
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+媽的每次有前端都要我包吔 :angry:
+
+Flutter 的坑有夠多 :shit:
+
