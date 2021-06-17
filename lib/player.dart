@@ -23,23 +23,18 @@ class _VideoPlayerState extends State<VideoPlayer> {
   Duration? _duration, _position;
   bool _isPlaying = false, _isEnd = false;
   String oldPath = '';
-  bool error = false;
 
   void initController() {
     _controller = vp.VideoPlayerController.network("${widget.videoPath}");
     _controller.addListener(() {
       if (_controller.value.hasError) {
         if (mounted) {
-          setState(() {
-            error = true;
-          });
+          if (widget.onError != null) {
+            widget.onError!();
+            print(_controller.value.errorDescription);
+          }
+          setState(() {});
         }
-        if (widget.onError != null) {
-          widget.onError!();
-          print(_controller.value.errorDescription);
-        }
-      } else {
-        error = false;
       }
 
       if (_controller.value.isInitialized) {
@@ -104,66 +99,66 @@ class _VideoPlayerState extends State<VideoPlayer> {
 
   @override
   Widget build(BuildContext context) {
-    if (!error && widget.videoPath != oldPath) {
+    if (widget.videoPath != oldPath) {
       print("Controller update new url: ${widget.videoPath}");
       if (_controller != null && _controller.value.isInitialized) {
         reInitialize();
       }
     }
 
-    return !error
-        ? Center(
-            child: _controller.value.isInitialized
-                ? ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 640, minWidth: 250),
-                    child: Column(children: [
-                      (widget.video)
-                          ? AspectRatio(
-                              aspectRatio: _controller.value.aspectRatio,
-                              child: vp.VideoPlayer(_controller),
-                            )
-                          : Container(),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            IconButton(
-                              icon: _controller.value.isPlaying && !_isEnd
-                                  ? Icon(Icons.pause)
-                                  : Icon(Icons.play_arrow),
-                              iconSize: 18.0,
-                              onPressed: () {
-                                setState(() {
-                                  _controller.value.isPlaying
-                                      ? _controller.pause()
-                                      : _controller.play();
-                                });
-                              },
-                            ),
-                            SizedBox(width: 10),
-                            // From more info about videoProgressIndicator
-                            // Head on: https://pub.dev/documentation/video_player/latest/video_player/VideoProgressIndicator-class.html
-                            Expanded(
-                              child: MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: vp.VideoProgressIndicator(_controller,
-                                      colors: vp.VideoProgressColors(
-                                        playedColor: Colors.lightGreen,
-                                        bufferedColor: Colors.lightGreen[100]!,
-                                        backgroundColor: Colors.grey[300]!,
-                                      ),
-                                      allowScrubbing: true)),
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                                '${durationFormatter(_position)} / ${durationFormatter(_duration)}'),
-                            SizedBox(width: 10),
-                            widget.child ?? SizedBox(),
-                          ])
-                    ]))
-                : Padding(
-                    padding: EdgeInsets.symmetric(vertical: 15),
-                    child: CircularProgressIndicator()))
-        : Icon(Icons.error);
+    if (_controller.value.hasError) {
+      return Icon(Icons.error);
+    } else if (_controller.value.isInitialized) {
+      return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 640, minWidth: 250),
+          child: Column(children: [
+            (widget.video)
+                ? AspectRatio(
+                    aspectRatio: _controller.value.aspectRatio,
+                    child: vp.VideoPlayer(_controller),
+                  )
+                : Container(),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton(
+                icon: _controller.value.isPlaying && !_isEnd
+                    ? Icon(Icons.pause)
+                    : Icon(Icons.play_arrow),
+                iconSize: 18.0,
+                onPressed: () {
+                  setState(() {
+                    _controller.value.isPlaying
+                        ? _controller.pause()
+                        : _controller.play();
+                  });
+                },
+              ),
+              SizedBox(width: 10),
+              // From more info about videoProgressIndicator
+              // Head on: https://pub.dev/documentation/video_player/latest/video_player/VideoProgressIndicator-class.html
+              Expanded(
+                child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: vp.VideoProgressIndicator(_controller,
+                        colors: vp.VideoProgressColors(
+                          playedColor: Colors.lightGreen,
+                          bufferedColor: Colors.lightGreen[100]!,
+                          backgroundColor: Colors.grey[300]!,
+                        ),
+                        allowScrubbing: true)),
+              ),
+              SizedBox(width: 10),
+              Text(
+                  '${durationFormatter(_position)} / ${durationFormatter(_duration)}'),
+              SizedBox(width: 10),
+              widget.child ?? SizedBox(),
+            ])
+          ]));
+    } else {
+      return Center(
+          child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 15),
+              child: CircularProgressIndicator()));
+    }
   }
 }
 

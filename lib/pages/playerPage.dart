@@ -217,9 +217,7 @@ class _PlayerState extends State<Player> {
         print(data);
         setState(() {
           musicName = data["filename"];
-          print("${data["url"]}");
-          //musicPath = "https://listen-with-emotion.herokuapp.com${data["url"]}";
-          musicPath = "https://had.name/data/daily-music/aud/0fkKJ.mp3";
+          musicPath = data["url"];
           autoPlay = true;
         });
       } catch (e) {
