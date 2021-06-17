@@ -57,7 +57,6 @@ class _VideoPlayerState extends State<VideoPlayer> {
                   _duration?.compareTo(_position!) == -1) {
                 if (widget.onEnd != null) {
                   _isEnd = true;
-                  _controller.seekTo(Duration(seconds: 0));
                   widget.onEnd!();
                 }
               } else {
@@ -141,8 +140,8 @@ class _VideoPlayerState extends State<VideoPlayer> {
                     cursor: SystemMouseCursors.click,
                     child: vp.VideoProgressIndicator(_controller,
                         colors: vp.VideoProgressColors(
-                          playedColor: Colors.cyan,
-                          bufferedColor: Colors.cyan[50]!,
+                          playedColor: Colors.lightGreen,
+                          bufferedColor: Colors.lightGreen[100]!,
                           backgroundColor: Colors.grey[300]!,
                         ),
                         allowScrubbing: true)),
