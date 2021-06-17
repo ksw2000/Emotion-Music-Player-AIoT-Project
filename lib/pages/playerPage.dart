@@ -10,6 +10,7 @@ import '../imageConvert.dart';
 import '../preprocessing.dart';
 import '../player.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 // model label
 // '驚喜', '害怕', '噁心', '開心', '傷心', '生氣', '無'
@@ -19,6 +20,8 @@ const facialModel = 'fe93.tflite';
 const facialLabel = [1, 0, 3, 1, 2, 3, 4];
 const musicServerLabel = ['害怕', '開心', '難過', '生氣', '無表情'];
 const noFace = 4;
+const presetMusicName = 'カヌレ';
+const presetMusicPath = 'https://had.name/data/daily-music/aud/ENq3c.mp3';
 
 class Player extends StatefulWidget {
   Player(this.cameraCtrl, {this.refresh});
@@ -31,14 +34,35 @@ class Player extends StatefulWidget {
 class _PlayerState extends State<Player> {
   late FaceDetector faceDetector;
   String emotion = '';
-  String musicName = 'カヌレ';
-  String musicPath = 'https://had.name/data/daily-music/aud/ENq3c.mp3';
+  String musicName = '';
+  String musicPath = '';
   bool autoPlay = false; // preset is false
+  bool loadLastMusic = false;
+
+  void loadPreference() async {
+    print("call loadPreference()");
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      musicName = prefs.getString('musicName') ?? presetMusicName;
+      musicPath = prefs.getString('musicPath') ?? presetMusicPath;
+      // Success get last music info
+      if (mounted) {
+        setState(() {
+          loadLastMusic = true;
+        });
+      }
+    } catch (e) {
+      // cannot get last music info but can get random music info
+      loadLastMusic = true;
+      getMusic(noFace);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     faceDetector = GoogleMlKit.vision.faceDetector(FaceDetectorOptions());
+    loadPreference();
   }
 
   @override
@@ -54,22 +78,24 @@ class _PlayerState extends State<Player> {
       Padding(
           padding: EdgeInsets.symmetric(vertical: 20),
           child: Text(
-            musicName,
+            (loadLastMusic) ? musicName : "載入中...",
             style: TextStyle(fontSize: 18),
           )),
       Padding(
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: VideoPlayer(
-            musicPath,
-            autoPlay: autoPlay,
-            video: false,
-            onEnd: () {
-              _detect();
-            },
-            onError: () {
-              snackBar("音樂網址錯誤！瑋哥快去修！", context);
-            },
-          )),
+          child: (loadLastMusic)
+              ? VideoPlayer(
+                  musicPath,
+                  autoPlay: autoPlay,
+                  video: false,
+                  onEnd: () {
+                    _detect();
+                  },
+                  onError: () {
+                    snackBar("音樂網址錯誤！瑋哥快去修！", context);
+                  },
+                )
+              : CircularProgressIndicator()),
       Spacer(),
       Text('$emotion'),
       Spacer(),
@@ -221,7 +247,20 @@ class _PlayerState extends State<Player> {
           autoPlay = true;
         });
       } catch (e) {
+        setState(() {
+          musicName = presetMusicName;
+          musicPath = presetMusicPath;
+          autoPlay = false;
+        });
         snackBar('伺服器錯誤', context);
+      }
+      // save music
+      try {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.setString("musicName", musicName);
+        prefs.setString("musicPath", musicPath);
+      } catch (e) {
+        print("無法儲存該筆記錄");
       }
     } else {
       snackBar('網路錯誤 ${res.statusCode}', context);
