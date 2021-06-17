@@ -11,55 +11,6 @@ import '../box.dart';
 const facialModel = 'fe93.tflite';
 const facialLabel = ['驚喜', '害怕', '噁心', '開心', '傷心', '生氣', '無'];
 
-class CameraPage extends StatefulWidget {
-  CameraPage({required this.camera});
-  final CameraDescription camera;
-  _CameraPageState createState() => _CameraPageState();
-}
-
-class _CameraPageState extends State<CameraPage> {
-  late CameraController cameraCtrl;
-
-  @override
-  void initState() {
-    cameraCtrl = CameraController(widget.camera, ResolutionPreset.low);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    cameraCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: cameraCtrl.initialize(),
-        builder: (BuildContext context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return MyCameraPreview(
-              cameraCtrl,
-              refresh: refresh,
-            );
-          } else if (snapshot.connectionState == ConnectionState.active) {
-            return Center(child: CircularProgressIndicator());
-          }
-          return TextButton(
-              onPressed: () {
-                refresh();
-              },
-              child: Center(child: Text('重新整埋')));
-        });
-  }
-
-  void refresh() {
-    setState(() {
-      cameraCtrl = CameraController(widget.camera, ResolutionPreset.low);
-    });
-  }
-}
-
 class MyCameraPreview extends StatefulWidget {
   MyCameraPreview(this.cameraCtrl, {this.refresh});
   final CameraController cameraCtrl;
@@ -118,18 +69,10 @@ class _MyCameraPreviewState extends State<MyCameraPreview> {
     return Stack(children: children);
   }
 
-  bool checkCameraCtrl() {
-    if (!widget.cameraCtrl.value.isInitialized) {
-      return false;
-    }
-    return true;
-  }
-
   Future _stopDetect() async {
-    if (mounted) {
-      if (widget.cameraCtrl.value.isStreamingImages) {
-        widget.cameraCtrl.stopImageStream();
-      }
+    if (widget.cameraCtrl.value.isStreamingImages) {
+      await widget.cameraCtrl.stopImageStream();
+      widget.refresh!();
     }
   }
 
@@ -206,13 +149,13 @@ class _MyCameraPreviewState extends State<MyCameraPreview> {
           lock = false;
         }
       });
-    } catch (e) {
+    } on CameraException catch (e) {
       print("----------------------------------------");
       if (widget.refresh != null) {
         widget.refresh!();
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('camera controll is null'),
+          content: Text('$e'),
           action: SnackBarAction(
               label: 'close',
               onPressed: () {

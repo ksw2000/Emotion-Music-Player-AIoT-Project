@@ -24,25 +24,84 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.cyan,
         ),
-        home: DefaultTabController(
-            length: 2,
-            child: Scaffold(
-              appBar: AppBar(
-                bottom: TabBar(
-                  tabs: [
-                    Tab(icon: Icon(Icons.play_arrow)),
-                    Tab(icon: Icon(Icons.camera_alt)),
-                  ],
-                ),
-                title: Text("Emotion music player",
-                    style: TextStyle(color: Colors.white)),
-              ),
-              body: TabBarView(
-                children: [
-                  PlayerPage(camera: camera),
-                  CameraPage(camera: camera),
-                ],
-              ),
-            )));
+        home: InitialCamera(camera: camera));
+  }
+}
+
+class InitialCamera extends StatefulWidget {
+  InitialCamera({required this.camera});
+  final CameraDescription camera;
+  _InitialCameraState createState() => _InitialCameraState();
+}
+
+class _InitialCameraState extends State<InitialCamera> {
+  late CameraController cameraCtrl;
+  @override
+  void initState() {
+    cameraCtrl = CameraController(widget.camera, ResolutionPreset.low);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    cameraCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+        future: cameraCtrl.initialize(),
+        builder: (BuildContext context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Home(
+              cameraCtrl,
+              refresh: refresh,
+            );
+          } else if (snapshot.connectionState == ConnectionState.active) {
+            return Center(child: CircularProgressIndicator());
+          }
+          return TextButton(
+              onPressed: () {
+                refresh();
+              },
+              child: Center(child: Text('重新整理')));
+        });
+  }
+
+  void refresh() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+}
+
+class Home extends StatelessWidget {
+  Home(this.cameraCtrl, {required this.refresh});
+  final CameraController cameraCtrl;
+  final Function refresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            bottom: TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.play_arrow)),
+                Tab(icon: Icon(Icons.camera_alt)),
+              ],
+            ),
+            title: Text("Emotion music player",
+                style: TextStyle(color: Colors.white)),
+          ),
+          body: TabBarView(
+            children: [
+              Player(cameraCtrl, refresh: refresh),
+              MyCameraPreview(cameraCtrl, refresh: refresh),
+            ],
+          ),
+        ));
   }
 }

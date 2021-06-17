@@ -3,62 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_ml_kit/google_ml_kit.dart';
 import 'package:image/image.dart' as img;
+import "dart:async";
+import "dart:convert" as convert;
 import '../classifier.dart';
 import '../imageConvert.dart';
 import '../preprocessing.dart';
 import '../player.dart';
+import 'package:http/http.dart' as http;
 
+// model label
+// '驚喜', '害怕', '噁心', '開心', '傷心', '生氣', '無'
+// music server label
+// 1, 0, 3, 1, 2, 3, 4
 const facialModel = 'fe93.tflite';
-const facialLabel = ['驚喜', '害怕', '噁心', '開心', '傷心', '生氣', '無'];
-
-class PlayerPage extends StatefulWidget {
-  PlayerPage({required this.camera});
-  final CameraDescription camera;
-  _PlayerPageState createState() => _PlayerPageState();
-}
-
-class _PlayerPageState extends State<PlayerPage> {
-  late CameraController cameraCtrl;
-
-  @override
-  void initState() {
-    cameraCtrl = CameraController(widget.camera, ResolutionPreset.low);
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    cameraCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: cameraCtrl.initialize(),
-        builder: (BuildContext context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return Player(
-              cameraCtrl,
-              refresh: refresh,
-            );
-          } else if (snapshot.connectionState == ConnectionState.active) {
-            return Center(child: CircularProgressIndicator());
-          }
-          return TextButton(
-              onPressed: () {
-                refresh();
-              },
-              child: Center(child: Text('重新整埋')));
-        });
-  }
-
-  void refresh() {
-    setState(() {
-      cameraCtrl = CameraController(widget.camera, ResolutionPreset.low);
-    });
-  }
-}
+const facialLabel = [1, 0, 3, 1, 2, 3, 4];
+const musicServerLabel = ['害怕', '開心', '難過', '生氣', '無表情'];
+const noFace = 4;
 
 class Player extends StatefulWidget {
   Player(this.cameraCtrl, {this.refresh});
@@ -71,6 +31,9 @@ class Player extends StatefulWidget {
 class _PlayerState extends State<Player> {
   late FaceDetector faceDetector;
   String emotion = '';
+  String musicName = 'カヌレ';
+  String musicPath = 'https://had.name/data/daily-music/aud/ENq3c.mp3';
+  bool autoPlay = false; // preset is false
 
   @override
   void initState() {
@@ -91,13 +54,23 @@ class _PlayerState extends State<Player> {
       Padding(
           padding: EdgeInsets.symmetric(vertical: 20),
           child: Text(
-            'カヌレ.mp3',
+            musicName,
             style: TextStyle(fontSize: 18),
           )),
       Padding(
           padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: VideoPlayer('https://had.name/data/daily-music/aud/ENq3c.mp3',
-              video: false)),
+          child: VideoPlayer(
+            musicPath,
+            autoPlay: autoPlay,
+            video: false,
+            onEnd: () {
+              _detect();
+            },
+            onError: () {
+              snackBar("音樂網址錯誤！瑋哥快去修！", context);
+            },
+          )),
+      Spacer(),
       Text('$emotion'),
       Spacer(),
       Padding(
@@ -111,7 +84,7 @@ class _PlayerState extends State<Player> {
                   ? IconButton(
                       icon: Icon(Icons.stop, color: Colors.white, size: 30),
                       onPressed: () async {
-                        await _stopDetect();
+                        await _stopDetect([]);
                         setState(() {});
                       },
                     )
@@ -124,10 +97,27 @@ class _PlayerState extends State<Player> {
     ]);
   }
 
-  Future _stopDetect() async {
-    if (mounted) {
-      if (widget.cameraCtrl.value.isStreamingImages) {
-        widget.cameraCtrl.stopImageStream();
+  // give each label's number
+  Future _stopDetect(score) async {
+    if (widget.cameraCtrl.value.isStreamingImages) {
+      await widget.cameraCtrl.stopImageStream();
+      if (score.length > 0) {
+        print(score);
+        int maxLabel = 0;
+        for (var i = 1; i < score.length; i++) {
+          if (score[i] > score[maxLabel]) {
+            maxLabel = i;
+          }
+        }
+        print("$maxLabel");
+        setState(() {
+          if (maxLabel == noFace) {
+            emotion = "沒有偵測到您的表情，為您隨機點播";
+          } else {
+            emotion = "正在為您推薦「${musicServerLabel[maxLabel]}」適合聽的歌";
+          }
+        });
+        await getMusic(maxLabel);
       }
     }
   }
@@ -141,7 +131,20 @@ class _PlayerState extends State<Player> {
       print(e);
     }
 
+    // the numbers of each label
+    List score = [0, 0, 0, 0, 0]; // 0 - 4
+
     try {
+      // timeout
+      // try to predict in 5 seconds
+      new Timer(Duration(seconds: 5), () {
+        if (widget.cameraCtrl.value.isStreamingImages) {
+          print("5秒到了");
+          lock = true;
+          _stopDetect(score);
+        }
+      });
+
       widget.cameraCtrl.startImageStream((CameraImage cameraImg) async {
         if (!lock) {
           lock = true;
@@ -162,7 +165,8 @@ class _PlayerState extends State<Player> {
 
           if (faces.length == 0) {
             setState(() {
-              emotion = "無人臉";
+              emotion = musicServerLabel[noFace];
+              score[noFace] += 1;
             });
           }
 
@@ -184,9 +188,12 @@ class _PlayerState extends State<Player> {
               var input = ImagePrehandle.uint32ListToRGB3D(resultImage);
               var output = cls.run([input]);
               print(facialLabel[output]);
-              setState(() {
-                emotion = facialLabel[output];
-              });
+              if (!lock) {
+                setState(() {
+                  score[facialLabel[output]] += 1;
+                  emotion = musicServerLabel[facialLabel[output]];
+                });
+              }
             } else {
               print("interpreter is null");
             }
@@ -195,17 +202,41 @@ class _PlayerState extends State<Player> {
         }
       });
     } catch (e) {
-      print("----------------------------------------");
-      if (widget.refresh != null) {
-        widget.refresh!();
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('camera controll is null'),
-          action: SnackBarAction(
-              label: 'close',
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              })));
+      widget.refresh!();
+      snackBar('$e', context);
     }
   }
+
+  Future getMusic(int label) async {
+    var url = Uri.parse(
+        'https://listen-with-emotion.herokuapp.com/predict?label=$label');
+    var res = await http.get(url);
+    if (res.statusCode == 200) {
+      try {
+        Map data = convert.jsonDecode(res.body);
+        print(data);
+        setState(() {
+          musicName = data["filename"];
+          print("${data["url"]}");
+          //musicPath = "https://listen-with-emotion.herokuapp.com${data["url"]}";
+          musicPath = "https://had.name/data/daily-music/aud/0fkKJ.mp3";
+          autoPlay = true;
+        });
+      } catch (e) {
+        snackBar('伺服器錯誤', context);
+      }
+    } else {
+      snackBar('網路錯誤 ${res.statusCode}', context);
+    }
+  }
+}
+
+void snackBar(String msg, BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      action: SnackBarAction(
+          label: 'close',
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          })));
 }
